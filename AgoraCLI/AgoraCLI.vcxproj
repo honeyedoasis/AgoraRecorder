@@ -61,7 +61,7 @@
       <PreprocessorDefinitions>_CONSOLE;NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(ProjectDir)..\sdk\high_level_api\include;$(ProjectDir)..\ThirdParty\libYUV\;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\sdk\high_level_api\include;$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <ConformanceMode>false</ConformanceMode>
@@ -72,9 +72,8 @@
       <LinkIncremental>true</LinkIncremental>
       <OptimizeReferences>false</OptimizeReferences>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
-      <AdditionalLibraryDirectories>$(ProjectDir)..\sdk\x64;$(ProjectDir)..\ThirdParty\libFFmpeg\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>agora_rtc_sdk.dll.lib;User32.lib;Gdi32.lib;Ole32.lib;Advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <IgnoreSpecificDefaultLibraries>libcmt.lib;msvcrtd.lib</IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>$(ProjectDir)..\sdk\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>agora_rtc_sdk.dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(ProjectDir)..\sdk\x64\*.dll" "$(OutDir)"</Command>
@@ -109,6 +108,7 @@
   <ItemGroup>
     <ClCompile Include="AgoraCLI.cpp" />
     <ClCompile Include="MyBase64.cpp" />
+    <ClCompile Include="Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AgoraCLI.h">
@@ -186,6 +186,7 @@
       <LinkCompiled>true</LinkCompiled>
     </ClInclude>
     <ClInclude Include="MyBase64.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
