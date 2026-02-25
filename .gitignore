@@ -1,4 +1,7 @@
-/AgoraCLI/sdk
+sdk
 /.idea
 *.dll
 *.lib
+/x64/
+/AgoraCLI/x64/
+/ThirdParty
