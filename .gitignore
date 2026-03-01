@@ -3,5 +3,6 @@ sdk
 *.dll
 *.lib
 /x64/
-/AgoraCLI/x64/
-/ThirdParty
+/AgoraRecorder/x64/
+/ThirdParty/
+config.ini

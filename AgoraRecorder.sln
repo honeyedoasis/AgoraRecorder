@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AgoraCLI", "AgoraCLI\AgoraCLI.vcxproj", "{7AA83E4A-DB4E-4F07-B6DF-4C98C2A35782}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AgoraRecorder", "AgoraRecorder\AgoraRecorder.vcxproj", "{7AA83E4A-DB4E-4F07-B6DF-4C98C2A35782}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

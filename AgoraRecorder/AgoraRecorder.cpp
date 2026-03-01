@@ -343,7 +343,7 @@ namespace
 
 int main(int argc, char* argv[])
 {
-    std::cout << "Start AgoraCLI" << std::endl;
+    std::cout << "Start AgoraRecorder" << std::endl;
     AgoraConfig agoraConfig(argc, argv);
     agoraConfig.logConfig();
 
