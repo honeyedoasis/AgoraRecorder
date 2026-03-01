@@ -19,6 +19,8 @@ using namespace utils;
 
 void WaitInput()
 {
+    std::cout << "\nPress Enter to exit..." << std::endl;
+
     // Clear any characters left in the input buffer
     std::cin.clear();
     std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
@@ -99,12 +101,25 @@ struct AgoraConfig
     AgoraConfig(int argc, char* argv[])
     {
         // 1. Optional: Load defaults from a file first if it exists
-        loadFromFile("config.ini");
+        if (!loadFromFile("config.ini") && argc == 1)
+        {
+            printHelp();
+            WaitInput();
+            std::exit(0);
+        }
 
         // 2. Overwrite with command line arguments (CLI takes priority)
         for (int i = 1; i < argc; ++i)
         {
             std::string arg = argv[i];
+
+            // Check for help flags
+            if (arg == "-h" || arg == "-help" || arg == "--help")
+            {
+                printHelp();
+                WaitInput();
+                std::exit(0);
+            }
 
             // Handle the case where the user passes a config file path via CLI
             if (arg.find("-config=") == 0)
@@ -133,6 +148,23 @@ struct AgoraConfig
         std::cout << "  Encryption Key:  " << (encryptionKey.empty() ? "DISABLED" : encryptionKey) << std::endl;
         std::cout << "  Encryption Salt: " << (encryptionSalt.empty() ? "NONE" : encryptionSalt) << std::endl;
         std::cout << "------------------------------------------\n" << std::endl;
+    }
+
+    void printHelp()
+    {
+        std::cout << "\nUsage: ./AgoraRecorder [options]\n\n"
+                  << "Options:\n"
+                  << "  -app_id=<id>           The Agora App ID\n"
+                  << "  -channel_name=<name>   The channel name\n"
+                  << "  -token=<token>         (Optional) The RTC token\n"
+                  << "  -user_id=<id>          (Optional) The User ID (as string)\n"
+                  << "  -encryption_key=<key>  (Optional) Encryption key for media\n"
+                  << "  -encryption_salt=<salt> (Optional) Base64 encoded salt\n"
+                  << "  -config=<path>         Or load these settings from an ini file\n"
+                  << "  -help, --help, -h      Show this help menu\n\n"
+                  << "Notes:\n"
+                  << "  - CLI arguments take priority over values in config.ini.\n"
+                  << "  - Config file format: key=value (one per line, # for comments)\n" << std::endl;
     }
 };
 
@@ -306,12 +338,12 @@ public:
 // A basic window procedure to handle the "X" button and drawing
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    switch (uMsg)
+    if (uMsg == WM_DESTROY)
     {
-    case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
     }
+
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
