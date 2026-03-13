@@ -1,6 +1,9 @@
 ﻿#pragma once
 #include <AgoraBase.h>
+#include <array>
 #include <string>
+#include <chrono>
+#include <iostream>
 
 using namespace agora::rtc;
 
@@ -231,5 +234,70 @@ namespace utils
         case USER_OFFLINE_BECOME_AUDIENCE: return "User changed role to Audience";
         default: return "Unknown";
         }
+    }
+
+    inline const char* getCodecTypeString(agora::rtc::VIDEO_CODEC_TYPE mytype) {
+        switch (mytype)
+        {
+        case VIDEO_CODEC_NONE:
+            return "NONE";
+        case VIDEO_CODEC_VP8:
+            return "VP8";
+        case VIDEO_CODEC_H264:
+            return "H264";
+        case VIDEO_CODEC_H265:
+            return "H265";
+        case VIDEO_CODEC_GENERIC:
+            return "GENERIC";
+        case VIDEO_CODEC_GENERIC_H264:
+            return "GENERIC_H264";
+        case VIDEO_CODEC_AV1:
+            return "AV1";
+        case VIDEO_CODEC_VP9:
+            return "VP9";
+        case VIDEO_CODEC_GENERIC_JPEG:
+            return "GENERIC_JPEG";
+        }
+
+        return "ERROR";
+    }
+
+    // Get current monotonic time in milliseconds
+    inline uint64_t getMonotonicMs() {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()
+        ).count();
+    }
+    
+    inline bool directoryExists(const std::string& folderName) {
+        DWORD ftyp = GetFileAttributesA(folderName.c_str());
+        if (ftyp == INVALID_FILE_ATTRIBUTES)
+            return false;  // Something is wrong with the path
+
+        if (ftyp & FILE_ATTRIBUTE_DIRECTORY)
+            return true;   // It is a directory
+
+        return false;      // It is a file, not a directory
+    }
+
+    inline int executeCmd(const std::string& cmd) {
+        std::string fullCmd = cmd + " 2>&1";
+        std::cout << "Executing cmd:" << fullCmd << std::endl;
+        std::array<char, 256> buffer;
+        std::string result;
+
+        std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen(fullCmd.c_str(), "r"), _pclose);
+
+        if (!pipe)
+        {
+            return -1;
+        }
+
+        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr) {
+            std::cout << buffer.data() << std::flush;
+            result += buffer.data();
+        }
+
+        return _pclose(pipe.release());
     }
 }
