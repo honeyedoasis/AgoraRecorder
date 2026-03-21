@@ -285,8 +285,8 @@ public:
 			Ctx->lastActivityTime = now;
 
 			outputFile.write(reinterpret_cast<const char*>(imageBuffer), static_cast<long>(length));
-			outputFile.flush(); // Ensure data is written to disk
-			infoFile.flush();
+			// outputFile.flush(); // Ensure data is written to disk
+			// infoFile.flush();
 		}
 
 		if (videotsFile.is_open())
@@ -460,7 +460,7 @@ public:
 		{
 			// For every frame (including the first one), calculate the local offset
 			infoFile << videoFrame.renderTimeMs << "," << monoMs << "\n";
-			infoFile.flush();
+			// infoFile.flush();
 		}
 		return true;
 	}
