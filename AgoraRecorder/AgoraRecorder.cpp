@@ -224,16 +224,22 @@ public:
 									size_t length,
 									const EncodedVideoFrameInfo& videoEncodedFrameInfo) override
 	{
+		auto now = std::chrono::steady_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - Ctx->recordingStartTime);
+		auto monoMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
+		long long localMs;
 		// 1. If we haven't found a keyframe, check this frame
 		if (!isHeaderFound)
 		{
-			if (videoEncodedFrameInfo.frameType == agora::rtc::VIDEO_FRAME_TYPE_KEY_FRAME)
+			// if (videoEncodedFrameInfo.frameType == agora::rtc::VIDEO_FRAME_TYPE_KEY_FRAME)
 			{
+				Ctx->recordingStartTime = now;
+				localMs = 0;
+
 				std::string videoPath = Ctx->folder + "\\" + VIDEO_NAME;
 				std::string infoPath = Ctx->folder + "\\fullVideoInfo.csv";
 				std::string videotsPath = Ctx->folder + "\\" + VIDEOTS_NAME;
-
-				Ctx->recordingStartTime = std::chrono::steady_clock::now();
 
 				infoFile.open(infoPath.c_str(), std::ios::out);
 				videotsFile.open(videotsPath.c_str(), std::ios::out);
@@ -243,23 +249,19 @@ public:
 
 				isHeaderFound = true;
 				outputFile.open(videoPath, std::ios::binary | std::ios::out);
-				firstVideoTS = getMonotonicMs();
+				firstVideoTS = monoMs;
+				std::cout << "First video frame: " << monoMs << std::endl;
 			}
-			else
-			{
-				// Still waiting for a keyframe, skip this packet
-				return true;
-			}
+		}
+		else
+		{
+			// std::chrono::time_point<std::chrono::steady_clock> now = std::chrono::steady_clock::now();
+			localMs = delta.count();
 		}
 
 		if (infoFile.is_open())
 		{
 			// For every frame (including the first one), calculate the local offset
-			auto now = std::chrono::steady_clock::now();
-			auto localMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - Ctx->recordingStartTime).count();
-
-			auto monoMs = getMonotonicMs();
-
 			infoFile
 				<< monoMs << ","
 				<< localMs << ","
@@ -272,13 +274,15 @@ public:
 				<< videoEncodedFrameInfo.framesPerSecond << ","
 				<< videoEncodedFrameInfo.rotation << ","
 				<< videoEncodedFrameInfo.trackId << ","
+				<< videoEncodedFrameInfo.frameType << ","
+				<< videoEncodedFrameInfo.streamType << ","
 				<< length << "\n";
 		}
 
 		// 3. If the file is open, write the data
 		if (outputFile.is_open())
 		{
-			Ctx->lastActivityTime = std::chrono::steady_clock::now();
+			Ctx->lastActivityTime = now;
 
 			outputFile.write(reinterpret_cast<const char*>(imageBuffer), static_cast<long>(length));
 			outputFile.flush(); // Ensure data is written to disk
@@ -287,7 +291,7 @@ public:
 
 		if (videotsFile.is_open())
 		{
-			videotsFile << videoEncodedFrameInfo.captureTimeMs << "\n";
+			videotsFile << localMs << "\n";
 		}
 
 		return true;
@@ -353,6 +357,10 @@ public:
 	// 3. Receive the raw PCM data
 	virtual bool onPlaybackAudioFrame(const char* channelId, AudioFrame& audioFrame) override
 	{
+		auto now = std::chrono::steady_clock::now();
+		auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - Ctx->recordingStartTime);
+		auto monoMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+
 		// 1. DUMMY FRAME CHECK
 		// If timestamps are 0, this is "empty" data. Stop processing here.
 		if (audioFrame.rtpTimestamp == 0)
@@ -368,15 +376,13 @@ public:
 			infoFile.open(infoPath.c_str(), std::ios::out);
 			isStarted = true;
 
-			firstAudioTS = getMonotonicMs();
+			firstAudioTS = monoMs;
+			std::cout << "First audio frame: " << monoMs << std::endl;
 		}
 
 		if (infoFile.is_open())
 		{
-			auto now = std::chrono::steady_clock::now();
-			auto localMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - Ctx->recordingStartTime).count();
-
-			auto monoMs = getMonotonicMs();
+			auto localMs = delta.count();
 
 			// Log to CSV (Matching the struct field names)
 			infoFile
@@ -393,7 +399,7 @@ public:
 
 		if (outputFile.is_open())
 		{
-			Ctx->lastActivityTime = std::chrono::steady_clock::now();
+			Ctx->lastActivityTime = now;
 
 			// Calculate size: samples * channels * 2 (because 16-bit PCM is 2 bytes per sample)
 			size_t bytesToWrite = audioFrame.samplesPerChannel * audioFrame.channels * 2;
@@ -429,6 +435,51 @@ public:
 	virtual AudioParams getEarMonitoringAudioParams() override { return AudioParams(); }
 };
 
+class MyFrameObserver : public agora::media::IVideoFrameObserver
+{
+public:
+	RecordingContext* Ctx = nullptr;
+	std::ofstream infoFile;
+
+	MyFrameObserver() = default;
+
+	bool onRenderVideoFrame(const char* channelId, uid_t remoteUid, VideoFrame& videoFrame) override
+	{
+		auto monoMs = getMonotonicMs();
+
+		if (!infoFile.is_open())
+		{
+			std::string infoPath = Ctx->folder + "\\videoRenderTime.csv";
+			if (!infoFile.is_open())
+			{
+				infoFile.open(infoPath.c_str(), std::ios::out);
+			}
+		}
+
+		if (infoFile.is_open())
+		{
+			// For every frame (including the first one), calculate the local offset
+			infoFile << videoFrame.renderTimeMs << "," << monoMs << "\n";
+			infoFile.flush();
+		}
+		return true;
+	}
+
+	void Cleanup()
+	{
+		if (infoFile.is_open())
+		{
+			infoFile.close();
+		}
+	}
+
+	bool onCaptureVideoFrame(agora::rtc::VIDEO_SOURCE_TYPE sourceType, VideoFrame& videoFrame) override { return true; }
+	bool onPreEncodeVideoFrame(agora::rtc::VIDEO_SOURCE_TYPE sourceType, VideoFrame& videoFrame) override { return true; }
+	bool onMediaPlayerVideoFrame(VideoFrame& videoFrame, int mediaPlayerId) override { return true; }
+	bool onTranscodedVideoFrame(VideoFrame& videoFrame) override { return true; }
+};
+
+
 class MyEventHandler : public IRtcEngineEventHandler
 {
 public:
@@ -458,6 +509,13 @@ public:
 
 			std::cout << "  Video canvas bound to UID: " << uid << std::endl;
 		}
+
+		if (UserLeft)
+		{
+			std::cout << "  User rejoined the stream!" << uid << std::endl;
+		}
+
+		UserLeft = false;
 	}
 
 	void onUserOffline(uid_t uid, USER_OFFLINE_REASON_TYPE reason) override
@@ -475,7 +533,7 @@ public:
 		}
 
 		UserLeft = true;
-		// std::cout << "Host left, exiting application..." << std::endl;
+		std::cout << "Host left, waiting to check if they come back..." << std::endl;
 		// PostMessage(videoHwnd, WM_CLOSE, 0, 0); 
 	}
 
@@ -536,6 +594,8 @@ namespace
 	MyEventHandler myEventHandler;
 	MyEncodedFrameObserver videoObserver;
 	MyRawAudioObserver audioObserver;
+
+	MyFrameObserver rawFrameObserver;
 }
 
 int main(int argc, char* argv[])
@@ -648,6 +708,12 @@ int main(int argc, char* argv[])
 		audioObserver.SetSharedCtx(ctx);
 		audioObserver.agoraConfig = agoraConfig;
 
+		rawFrameObserver.Ctx = ctx;
+		if (mediaEngine->registerVideoFrameObserver(&rawFrameObserver) != 0)
+		{
+			std::cout << "Failed to register test observer" << std::endl;
+		}
+
 		mediaEngine->registerVideoEncodedFrameObserver(&videoObserver);
 		mediaEngine->registerAudioFrameObserver(&audioObserver);
 	}
@@ -742,7 +808,7 @@ int main(int argc, char* argv[])
 			auto now = std::chrono::steady_clock::now();
 			auto lastActive = ctx->lastActivityTime.load();
 			auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(now - lastActive).count();
-			if (elapsedSeconds > 1)
+			if (elapsedSeconds > 10)
 			{
 				running = false;
 			}
@@ -755,6 +821,7 @@ int main(int argc, char* argv[])
 	std::cout << "Cleaning up" << std::endl;
 	audioObserver.Cleanup();
 	videoObserver.Cleanup();
+	rawFrameObserver.Cleanup();
 
 	engine->leaveChannel();
 
@@ -763,6 +830,7 @@ int main(int argc, char* argv[])
 	if (!agoraConfig.viewer)
 	{
 		// merge the video
+		if (0)
 		{
 			std::cout << "Merging video" << std::endl;
 			_chdir(folderName.c_str());
@@ -802,6 +870,11 @@ int main(int argc, char* argv[])
 				executeCmd(mergeCmd);
 			}
 		}
+
+		_chdir(folderName.c_str());
+		std::string mergeCmd = "agora_merge.py"; 
+		std::cout << "Merging video with " << mergeCmd << std::endl;
+		executeCmd(mergeCmd);
 	}
 
 	WaitInput();

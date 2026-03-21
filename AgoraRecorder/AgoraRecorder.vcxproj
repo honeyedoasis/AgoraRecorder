@@ -78,6 +78,7 @@
     </Link>
     <PostBuildEvent>
       <Command>copy /y "$(ProjectDir)..\sdk\x64\*.dll" "$(OutDir)"</Command>
+      <Command>copy /y "$(ProjectDir)..\agora_merge.py" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

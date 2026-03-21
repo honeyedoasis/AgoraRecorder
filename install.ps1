@@ -56,6 +56,26 @@ if (-not (Test-Path sdk)){
     }
 }
 
+Write-Host "Checking Python dependencies..." -ForegroundColor Cyan
+if (Get-Command python -ErrorAction SilentlyContinue) {
+    Write-Host "[PASS] Python found."
+    
+    # Check if pip is available via python -m
+    python -m pip --version > $null 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Installing/Updating Python requirements (av, pandas)..."
+        python -m pip install -r requirements.txt
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[FAIL] Failed to install Python packages." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "[FAIL] Pip not found. Please install pip." -ForegroundColor Red
+    }
+} else {
+    Write-Host "[FAIL] Python is not installed or not in PATH. Please install Python 3." -ForegroundColor Red
+}
+
 # Validation: check each folder has at least one direct child (non-empty), output to console only
 $allOk = $true
 foreach ($dir in @("ThirdParty", "sdk\x86", "sdk\x64", "sdk\high_level_api\include")) {
