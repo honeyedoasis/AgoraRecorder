@@ -487,6 +487,7 @@ public:
 	AgoraConfig agoraConfig;
 	HWND videoHwnd;
 	RecordingContext* Ctx = nullptr;
+	std::atomic<bool> HostLeft{false};
 	std::atomic<bool> UserLeft{false};
 
 	void onUserJoined(uid_t uid, int elapsed) override
@@ -510,12 +511,12 @@ public:
 			std::cout << "  Video canvas bound to UID: " << uid << std::endl;
 		}
 
-		if (UserLeft)
+		if (HostLeft)
 		{
 			std::cout << "  User rejoined the stream!" << uid << std::endl;
 		}
 
-		UserLeft = false;
+		HostLeft = false;
 	}
 
 	void onUserOffline(uid_t uid, USER_OFFLINE_REASON_TYPE reason) override
@@ -532,7 +533,7 @@ public:
 			UpdateWindow(videoHwnd);
 		}
 
-		UserLeft = true;
+		HostLeft = true;
 		std::cout << "Host left, waiting to check if they come back..." << std::endl;
 		// PostMessage(videoHwnd, WM_CLOSE, 0, 0); 
 	}
@@ -802,13 +803,16 @@ int main(int argc, char* argv[])
 			DispatchMessage(&msg);
 		}
 
-		if (myEventHandler.UserLeft)
+		if (myEventHandler.HostLeft || myEventHandler.UserLeft)
 		{
+			// wait 15s if we left the room otherwise 240s if the host left
+			int secondsToWait = myEventHandler.UserLeft ? 15 : 240;
+
 			// Check if recorders are inactive
 			auto now = std::chrono::steady_clock::now();
 			auto lastActive = ctx->lastActivityTime.load();
 			auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(now - lastActive).count();
-			if (elapsedSeconds > 10)
+			if (elapsedSeconds > secondsToWait)
 			{
 				running = false;
 			}
@@ -877,7 +881,7 @@ int main(int argc, char* argv[])
 		executeCmd(mergeCmd);
 	}
 
-	WaitInput();
+	// WaitInput();
 
 	return 0;
 }
