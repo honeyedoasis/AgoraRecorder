@@ -7,7 +7,6 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
-#include <windows.h>
 #include <direct.h>  // For _mkdir
 #include <cerrno>   // For checking if folder already exists
 
@@ -830,58 +829,6 @@ int main(int argc, char* argv[])
 	engine->leaveChannel();
 
 	engine->release();
-
-	if (!agoraConfig.viewer)
-	{
-		// merge the video
-		if (0)
-		{
-			std::cout << "Merging video" << std::endl;
-			_chdir(folderName.c_str());
-			std::cout << "Changed dir to: " << folderName.c_str() << std::endl;
-
-			// parse raw video
-			{
-				// std::string videoCmd = "mkvmerge -o video_only.mkv --timestamps 0:video_ts.txt remote_host_stream.h264";
-				std::stringstream ss;
-				ss << "mkvmerge -o video_only.mkv --timestamps 0:" << VIDEOTS_NAME << " " << VIDEO_NAME;
-				std::string videoCmd = ss.str();
-				executeCmd(videoCmd);
-			}
-
-			// parse raw audio
-			{
-				// std::string audioCmd = "ffmpeg -f s16le -ar 48000 -ac 2 -i remote_stream.pcm remote_stream.aac";
-
-				std::stringstream ss;
-				ss << "ffmpeg -f s16le -ar 48000 -ac 2 -i " << AUDIO_NAME << " audio.aac";
-				std::string audioCmd = ss.str();
-				executeCmd(audioCmd);
-			}
-
-			// std::string mergeCmd = "ffmpeg -y -i video_only.mkv -itsoffset -0.801 -i remote_stream.aac -c copy -map 0:v:0 -map 1:a:0 -shortest final_output.mp4";
-
-			// merge audio and video
-			{
-				uint64_t offset = videoObserver.firstVideoTS - audioObserver.firstAudioTS;
-				double offsetSeconds = offset / 1000.0;
-				// std::string mergeCmd = std::snprintf("ffmpeg -y -i video_only.mkv -itsoffset -%.3f -i remote_stream.aac -c copy -map 0:v:0 -map 1:a:0 -shortest final_output.mp4", offsetSeconds);
-				std::stringstream ss;
-				ss << "ffmpeg -y -i video_only.mkv -ss " << offsetSeconds << " -i audio.aac -c copy -map 0:v:0 -map 1:a:0 -shortest output.mkv";
-				// ss << "ffmpeg -y -i video_only.mkv -itsoffset " << offsetSeconds << " -i audio.aac -c copy -map 0:v:0 -map 1:a:0 output.mkv";
-
-				std::string mergeCmd = ss.str();
-				executeCmd(mergeCmd);
-			}
-		}
-
-		_chdir(folderName.c_str());
-		std::string mergeCmd = "agora_merge.py"; 
-		std::cout << "Merging video with " << mergeCmd << std::endl;
-		executeCmd(mergeCmd);
-	}
-
-	// WaitInput();
 
 	return 0;
 }
